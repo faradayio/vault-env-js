@@ -1,0 +1,32 @@
+{
+  "name": "vault-env",
+  "version": "1.0.0",
+  "description": "Put your vault secrets in your process.env",
+  "main": "index.js",
+  "scripts": {
+    "lint": "standard",
+    "test": "node ./test/index.js"
+  },
+  "keywords": [
+    "vault",
+    "env",
+    "hashicorp"
+  ],
+  "author": "Tristan Davies <tristan@faraday.io>",
+  "license": "MIT",
+  "dependencies": {
+    "find-root": "^1.0.0",
+    "sync-request": "^3.0.0"
+  },
+  "pre-commit": [
+    "test",
+    "lint"
+  ],
+  "devDependencies": {
+    "git-validate": "^2.1.4",
+    "standard": "^6.0.8",
+    "tape": "^4.5.1",
+    "through2-linereader": "0.0.1",
+    "tmp": "0.0.28"
+  }
+}
