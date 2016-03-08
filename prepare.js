@@ -16,10 +16,7 @@ module.exports = function prepare (options) {
   var VAULT_TOKEN = options.VAULT_TOKEN || process.env.VAULT_TOKEN
   var VAULT_API_VERSION = options.VAULT_API_VERSION || process.env.VAULT_API_VERSION || 'v1'
   var VAULT_ENV_PATH = options.VAULT_ENV_PATH || process.env.VAULT_ENV_PATH || findRoot(process.cwd()) + '/package.json'
-
-  if (process.env.VAULT_TOKEN) {
-    delete process.env.VAULT_TOKEN
-  }
+  var envDest = options.dryrun ? {} : process.env
 
   var originalSecrets = JSON.parse(readFile(VAULT_ENV_PATH))['vault-secrets'] || {}
 
@@ -75,9 +72,14 @@ module.exports = function prepare (options) {
     var originalValue = value.join(':')
     var vaultPath = value[0]
     var vaultKey = value[1]
+    var fullUrl = (
+      VAULT_ADDR.replace(/([^\/])$/, '$1/') +
+      VAULT_API_VERSION +
+      vaultPath.replace(/^([^\/])/, '/$1')
+    )
     !options.silent && process.stdout.write('VAULT: ' + key + ' = ' + vaultPath + ':' + vaultKey)
     try {
-      var response = request('GET', VAULT_ADDR + '/' + VAULT_API_VERSION + '/' + vaultPath, {
+      var response = request('GET', fullUrl, {
         headers: {
           'X-Vault-Token': VAULT_TOKEN
         }
@@ -96,7 +98,7 @@ module.exports = function prepare (options) {
       if (typeof data !== 'string' && typeof data !== 'number') {
         throw new Error('Unexpected type ' + typeof data + ' for ' + originalValue)
       }
-      process.env[key] = data
+      envDest[key] = data
       !options.silent && process.stdout.write(' ✓\n')
     } catch (err) {
       !options.silent && process.stdout.write(' ✕\n')
@@ -105,4 +107,6 @@ module.exports = function prepare (options) {
   })
 
   !options.silent && console.log('VAULT: ready')
+
+  return envDest
 }

@@ -1,11 +1,14 @@
 {
   "name": "vault-env",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Put your vault secrets in your process.env",
-  "main": "index.js",
+  "main": "main.js",
   "scripts": {
     "lint": "standard",
     "test": "node ./test/index.js"
+  },
+  "bin": {
+    "vault-env": "./cli.js"
   },
   "keywords": [
     "vault",
