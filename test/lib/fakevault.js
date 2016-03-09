@@ -23,6 +23,7 @@ createServer(function responder (req, res) {
   } else {
     res.writeHeader(200)
     res.end(JSON.stringify({ data: SECRETS[key] }))
+    delete SECRETS[key]
   }
 }).listen(PORT, function () {
   console.log('ready')

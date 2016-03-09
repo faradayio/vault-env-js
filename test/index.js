@@ -173,3 +173,19 @@ test('two invalid secret paths', {
   },
   throws: /Missing key \(syntax "secrets\/1:key"\) in thing, stuff/
 })
+
+test('multiple secrets from one path', {
+  pkg: {
+    'vault-secrets': {
+      one: 'secrets/test:one',
+      two: '/secrets/test:two'
+    }
+  },
+  secrets: {
+    'secrets/test': { one: 'one', two: 'two' }
+  },
+  expected: {
+    one: 'one',
+    two: 'two'
+  }
+})

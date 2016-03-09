@@ -1,1 +1,1 @@
-require('./prepare')()
+module.exports = require('./prepare')()
