@@ -4,14 +4,11 @@ var asyncRequest = require('then-request')
 var readFile = require('fs').readFileSync
 var inspect = require('util').inspect
 var EventEmitter = require('events')
+var parseSecretfile = require('./parseSecretfile')
 
 function plural (n) {
   return n === 1 ? '' : 's'
 }
-
-var ENV_PATTERN = /^[a-z_]+[a-z0-9_]*$/i
-var ENV_INTERPOLATE_PATTERN = /@([a-z_]+[a-z0-9_]*)@/gi
-var VAULT_PATH_PATTERN = /^\/?([^:]+):(.+)?$/
 
 function parseLeaseResponse (response) {
   return JSON.parse(response.getBody().toString())
@@ -37,7 +34,7 @@ module.exports = function prepare (options) {
   var VAULT_ADDR = (options.VAULT_ADDR || process.env.VAULT_ADDR || 'http://127.0.0.1:8200').replace(/([^\/])$/, '$1/')
   var VAULT_TOKEN = options.VAULT_TOKEN || process.env.VAULT_TOKEN
   var VAULT_API_VERSION = options.VAULT_API_VERSION || process.env.VAULT_API_VERSION || 'v1'
-  var VAULT_ENV_PATH = options.VAULT_ENV_PATH || process.env.VAULT_ENV_PATH || findRoot(process.cwd()) + '/package.json'
+  var VAULT_ENV_PATH = options.VAULT_ENV_PATH || process.env.VAULT_ENV_PATH || findRoot(process.cwd()) + '/Secretfile'
   var varsWritten = {}
   var emitter = new EventEmitter()
 
@@ -45,48 +42,15 @@ module.exports = function prepare (options) {
     throw new Error('Expected VAULT_TOKEN to be set')
   }
 
-  var originalSecrets = JSON.parse(readFile(VAULT_ENV_PATH))['vault-secrets'] || {}
+  var originalSecrets = parseSecretfile(readFile(VAULT_ENV_PATH, 'utf8'))
 
-  var invalidKeys = []
-  var missingEnvVars = []
-  var missingColons = []
   var secretsByPath = {}
   Object.keys(originalSecrets).forEach(function (key) {
-    var value = originalSecrets[key]
-
-    if (!ENV_PATTERN.test(key)) {
-      invalidKeys.push(key)
-    }
-    value = value.replace(ENV_INTERPOLATE_PATTERN, function (_, varname) {
-      if (typeof process.env[varname] === 'undefined') {
-        missingEnvVars.push(varname)
-      }
-      return process.env[varname]
-    })
-    var matches = value.match(VAULT_PATH_PATTERN)
-    if (matches && matches[1] && matches[2]) {
-      var vaultPath = matches[1]
-      var vaultProp = matches[2]
-      secretsByPath[vaultPath] = secretsByPath[vaultPath] || {}
-      secretsByPath[vaultPath][key] = vaultProp
-    } else {
-      missingColons.push(key)
-    }
+    var vaultPath = originalSecrets[key][0]
+    var vaultProp = originalSecrets[key][1]
+    secretsByPath[vaultPath] = secretsByPath[vaultPath] || {}
+    secretsByPath[vaultPath][key] = vaultProp
   })
-
-  var errors = []
-  if (invalidKeys.length) {
-    errors.push('Invalid environment variable name' + plural(invalidKeys.length) + ': ' + invalidKeys.join(', '))
-  }
-  if (missingEnvVars.length) {
-    errors.push('Expected environment variable' + plural(missingEnvVars.length) + ' to be set: ' + missingEnvVars.join(', '))
-  }
-  if (missingColons.length) {
-    errors.push('Missing key (syntax "secrets/1:key") in ' + missingColons.join(', '))
-  }
-  if (errors.length) {
-    throw new Error('Error encountered while parsing vault-secrets in ' + VAULT_ENV_PATH + '\n' + errors.join('\n'))
-  }
 
   var secretCount = Object.keys(originalSecrets).length
   !options.silent && console.log(
@@ -125,7 +89,7 @@ module.exports = function prepare (options) {
     var secretsByName = secretsByPath[vaultPath]
     var previousValues = {}
     for (var secretName in secretsByName) {
-      var keyPath = secretsByName[secretName].split('.')
+      var keyPath = secretsByName[secretName]
       var data = lease.data
       for (var i = 0; i < keyPath.length; i++) {
         if (typeof data !== 'object' || typeof data[keyPath[i]] === 'undefined') {

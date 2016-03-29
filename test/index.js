@@ -10,23 +10,23 @@ var TEST_PORT = 39582
 var TEST_TOKEN = 'test-token-1'
 
 function test (name, options) {
-  var pkg = options.pkg
+  var secretfile = options.secretfile
   var secrets = options.secrets
   var expected = options.expected
   var throws = options.throws
-  var packagePath = tmpFile().name
+  var secretfilePath = tmpFile().name
 
   function doIt () {
     prepare({
       VAULT_ADDR: `http://127.0.0.1:${TEST_PORT}`,
       VAULT_TOKEN: TEST_TOKEN,
-      VAULT_ENV_PATH: packagePath,
+      VAULT_ENV_PATH: secretfilePath,
       silent: true
     })
   }
 
   tape(name, function (t) {
-    writeFile(packagePath, JSON.stringify(pkg))
+    writeFile(secretfilePath, secretfile)
     var vaultServer = spawn(process.argv[0], [pathJoin(__dirname, '/lib/fakevault.js')], {
       env: {
         TEST_TOKEN: TEST_TOKEN,
@@ -65,11 +65,7 @@ function test (name, options) {
 }
 
 test('one env var', {
-  pkg: {
-    'vault-secrets': {
-      thing: 'secret/thing:url'
-    }
-  },
+  secretfile: 'thing secret/thing:url',
   secrets: {
     'secret/thing': {
       url: 'hellooooo'
@@ -81,12 +77,7 @@ test('one env var', {
 })
 
 test('two env vars', {
-  pkg: {
-    'vault-secrets': {
-      thing1: 'secret/thing:url1',
-      thing2: 'secret/thing:url2'
-    }
-  },
+  secretfile: 'thing1 secret/thing:url1\nthing2 secret/thing:url2',
   secrets: {
     'secret/thing': {
       url1: 'hellooooo',
@@ -99,88 +90,42 @@ test('two env vars', {
   }
 })
 
-test('deeply nested secret paths', {
-  pkg: {
-    'vault-secrets': {
-      thing1: 'secret/thing:deeply.nested.secret.path.thing1',
-      thing2: 'secret/thing:deeply.nested.secret.path.thing2'
-    }
-  },
-  secrets: {
-    'secret/thing': {deeply: {nested: {secret: {path: {
-      thing1: 'hellooooo',
-      thing2: 'goodbyeeee'
-    }}}}}
-  },
-  expected: {
-    thing1: 'hellooooo',
-    thing2: 'goodbyeeee'
-  }
-})
-
 test('one invalid env var', {
-  pkg: {
-    'vault-secrets': {
-      '2': 'secret/thing:url1'
-    }
-  },
+  secretfile: '2 secret/thing:url1',
   secrets: {},
-  throws: /Invalid environment variable name: 2/
+  throws: /Error parsing Secretfile:\nInvalid line 0: 2 secret\/thing:url1/
 })
 
 test('two invalid env vars', {
-  pkg: {
-    'vault-secrets': {
-      '2': 'secret/thing:url1',
-      '3': 'boop:thing'
-    }
-  },
+  secretfile: '2 secret/thing:url1\n3 boop:thing',
   secrets: {},
-  throws: /Invalid environment variable names: 2, 3/
+  throws: /Error parsing Secretfile:\nInvalid line 0: 2 secret\/thing:url1\nInvalid line 1: 3 boop:thing/
 })
 
 test('missing secret', {
-  pkg: {
-    'vault-secrets': {
-      boop: 'secret/thing:url'
-    }
-  },
+  secretfile: 'boop secret/thing:url',
   secrets: {},
-  throws: /Server responded with status code 404:\nkey not found secret\/thing/
+  throws: /key not found/
 })
 
 test('one invalid secret path', {
-  pkg: {
-    'vault-secrets': {
-      thing: 'secrets/thing'
-    }
-  },
+  secretfile: 'thing secret/thing',
   secrets: {
     thing: 'boop'
   },
-  throws: /Missing key \(syntax "secrets\/1:key"\) in thing/
+  throws: /key not found/
 })
 
 test('two invalid secret paths', {
-  pkg: {
-    'vault-secrets': {
-      thing: 'secrets/thing',
-      stuff: 'secrets/stuff'
-    }
-  },
+  secretfile: 'thing secrets/thing\nstuff secrets/stuff',
   secrets: {
     thing: 'boop'
   },
-  throws: /Missing key \(syntax "secrets\/1:key"\) in thing, stuff/
+  throws: /key not found/
 })
 
 test('multiple secrets from one path', {
-  pkg: {
-    'vault-secrets': {
-      one: 'secrets/test:one',
-      two: '/secrets/test:two'
-    }
-  },
+  secretfile: 'one secrets/test:one\ntwo secrets/test:two',
   secrets: {
     'secrets/test': { one: 'one', two: 'two' }
   },

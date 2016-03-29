@@ -9,14 +9,10 @@ Install the package
 npm install --save vault-env
 ```
 
-Add your secrets to `package.json`
+Write a `Secretfile` in your app directory
 
-```json
-{
-  "vault-secrets": {
-    "DATABASE_URL": "secrets/databases/main:url"
-  }
-}
+```
+DATABASE_URL secrets/databases/main:url
 ```
 
 Require `vault-env` and the environment variables are loaded
