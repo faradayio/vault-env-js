@@ -8,6 +8,7 @@ var pathJoin = require('path').join
 
 var TEST_PORT = 39582
 var TEST_TOKEN = 'test-token-1'
+process.env.SAMPLE = 'hello'
 
 function test (name, options) {
   var secretfile = options.secretfile
@@ -128,6 +129,17 @@ test('multiple secrets from one path', {
   secretfile: 'one secrets/test:one\ntwo secrets/test:two',
   secrets: {
     'secrets/test': { one: 'one', two: 'two' }
+  },
+  expected: {
+    one: 'one',
+    two: 'two'
+  }
+})
+
+test('env substitution', {
+  secretfile: 'one secrets/$SAMPLE:one\ntwo secrets/${SAMPLE}:two',
+  secrets: {
+    'secrets/hello': { one: 'one', two: 'two' }
   },
   expected: {
     one: 'one',
