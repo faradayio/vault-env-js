@@ -34,7 +34,7 @@ module.exports = function parseSecretfile (data) {
     throw new Error('Error parsing Secretfile:\n' + errorMessage)
   }
 
-  return lines.filter(Array.isArray).reduce((map, row) => {
+  return lines.filter(Array.isArray).reduce(function (map, row) {
     map[row[0]] = row.slice(1)
     return map
   }, {})
