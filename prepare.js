@@ -41,10 +41,6 @@ module.exports = function prepare (options) {
   var varsWritten = {}
   var emitter = new EventEmitter()
 
-  if (!VAULT_TOKEN) {
-    throw new Error('Expected VAULT_TOKEN to be set')
-  }
-
   var originalSecrets = parseSecretfile(readFile(VAULT_ENV_PATH, 'utf8'))
 
   var secretsByPath = {}
@@ -60,6 +56,10 @@ module.exports = function prepare (options) {
       console.log(logPrefix + key + ' already in environment ' + blue('✓'))
     }
   })
+
+  if (secretCount && !VAULT_TOKEN) {
+    throw new Error('Expected VAULT_TOKEN to be set')
+  }
 
   !options.silent && secretCount && console.log(
     logPrefix + 'fetching ' + secretCount + ' secret' + plural(secretCount) + ' from ' + VAULT_ADDR
