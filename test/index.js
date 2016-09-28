@@ -14,16 +14,25 @@ function test (name, options) {
   var secretfile = options.secretfile
   var secrets = options.secrets
   var expected = options.expected
+  var overrides = options.overrides
   var throws = options.throws
   var secretfilePath = tmpFile().name
 
   function doIt () {
+    for (var key in overrides) {
+      process.env[key] = overrides[key]
+    }
     prepare({
       VAULT_ADDR: `http://127.0.0.1:${TEST_PORT}`,
       VAULT_TOKEN: TEST_TOKEN,
       VAULT_ENV_PATH: secretfilePath,
-      silent: true
+      silent: false
     })
+  }
+  function cleanup () {
+    for (var key in expected) {
+      delete process.env[key]
+    }
   }
 
   tape(name, function (t) {
@@ -49,9 +58,11 @@ function test (name, options) {
             }
           }
 
+          cleanup()
           vaultServer.kill()
           t.end()
         } catch (err) {
+          cleanup()
           vaultServer.kill()
           t.fail(err)
         }
@@ -73,6 +84,17 @@ test('one env var', {
     }
   },
   expected: {
+    thing: 'hellooooo'
+  }
+})
+
+test('override env var', {
+  secretfile: 'thing secret/thing:url',
+  secrets: {},
+  expected: {
+    thing: 'hellooooo'
+  },
+  overrides: {
     thing: 'hellooooo'
   }
 })

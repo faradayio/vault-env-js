@@ -26,6 +26,9 @@ function green (text) {
 function red (text) {
   return formatText(text, 31, 39)
 }
+function blue (text) {
+  return formatText(text, 34, 39)
+}
 
 var logPrefix = bold('vault-env: ')
 
@@ -45,15 +48,20 @@ module.exports = function prepare (options) {
   var originalSecrets = parseSecretfile(readFile(VAULT_ENV_PATH, 'utf8'))
 
   var secretsByPath = {}
+  var secretCount = 0
   Object.keys(originalSecrets).forEach(function (key) {
-    var vaultPath = originalSecrets[key][0]
-    var vaultProp = originalSecrets[key][1]
-    secretsByPath[vaultPath] = secretsByPath[vaultPath] || {}
-    secretsByPath[vaultPath][key] = vaultProp
+    if (typeof process.env[key] === 'undefined') {
+      var vaultPath = originalSecrets[key][0]
+      var vaultProp = originalSecrets[key][1]
+      secretsByPath[vaultPath] = secretsByPath[vaultPath] || {}
+      secretsByPath[vaultPath][key] = vaultProp
+      secretCount++
+    } else if (!options.silent) {
+      console.log(logPrefix + key + ' already in environment ' + blue('✓'))
+    }
   })
 
-  var secretCount = Object.keys(originalSecrets).length
-  !options.silent && console.log(
+  !options.silent && secretCount && console.log(
     logPrefix + 'fetching ' + secretCount + ' secret' + plural(secretCount) + ' from ' + VAULT_ADDR
   )
 

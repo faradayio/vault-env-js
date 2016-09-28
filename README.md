@@ -48,7 +48,7 @@ setTimeout(function () {
 }, 1000 * 60 * 60 * 24 * 7 * 6)
 ```
 
-You can also watch for secret changes
+Watch for secret changes
 
 ```js
 var vaultEnv = require('vault-env/rotate')
