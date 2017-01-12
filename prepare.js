@@ -37,7 +37,11 @@ module.exports = function prepare (options) {
   var VAULT_ADDR = (options.VAULT_ADDR || process.env.VAULT_ADDR || 'http://127.0.0.1:8200').replace(/([^\/])$/, '$1/')
   var VAULT_TOKEN = options.VAULT_TOKEN || process.env.VAULT_TOKEN
   var VAULT_API_VERSION = options.VAULT_API_VERSION || process.env.VAULT_API_VERSION || 'v1'
-  var VAULT_ENV_PATH = options.VAULT_ENV_PATH || process.env.VAULT_ENV_PATH || findRoot(process.cwd()) + '/Secretfile'
+  var VAULT_ENV_PATH = (
+    options.VAULT_ENV_PATH ||
+    process.env.VAULT_ENV_PATH ||
+    findRoot(process.argv[1] || process.cwd()) + '/Secretfile'
+  )
   var varsWritten = {}
   var emitter = new EventEmitter()
 
