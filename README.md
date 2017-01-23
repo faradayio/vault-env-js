@@ -62,6 +62,7 @@ your variables will only be exported by the module as regular variables
 
 ```js
 var secret = require('./vault-env/local')
+
 console.log(secret.DATABASE_URL)
 // => 'postgres://...'
 ```
