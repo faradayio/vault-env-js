@@ -16,17 +16,19 @@ function test (name, options) {
   var expected = options.expected
   var overrides = options.overrides
   var throws = options.throws
+  var local = options.local
   var secretfilePath = tmpFile().name
 
   function doIt () {
     for (var key in overrides) {
       process.env[key] = overrides[key]
     }
-    prepare({
+    return prepare({
       VAULT_ADDR: `http://127.0.0.1:${TEST_PORT}`,
       VAULT_TOKEN: TEST_TOKEN,
       VAULT_ENV_PATH: secretfilePath,
-      silent: false
+      silent: false,
+      local: local
     })
   }
   function cleanup () {
@@ -52,9 +54,14 @@ function test (name, options) {
           if (throws) {
             t.throws(doIt, throws)
           } else {
-            doIt()
+            var mySecret = doIt()
             for (var key in expected) {
-              t.equal(process.env[key], expected[key], key + ' should match')
+              if (!options.local) {
+                  t.equal(process.env[key], expected[key], key + ' should match')
+              } else {
+                  t.notEqual(process.env[key], expected[key], key + ' should not match')
+                  t.equal(mySecret[key], expected[key], key + ' should match')
+              }
             }
           }
 
@@ -167,4 +174,32 @@ test('env substitution', {
     one: 'one',
     two: 'two'
   }
+})
+
+test('one var local only', {
+    secretfile: 'thing secret/thing:url',
+    secrets: {
+        'secret/thing': {
+            url: 'hellooooo'
+        }
+    },
+    expected: {
+        thing: 'hellooooo'
+    },
+    local: 'true'
+})
+
+test('two vars local only', {
+    secretfile: 'thing1 secret/thing:url1\nthing2 secret/thing:url2',
+    secrets: {
+        'secret/thing': {
+            url1: 'hellooooo',
+            url2: 'goodbyeeee'
+        }
+    },
+    expected: {
+        thing1: 'hellooooo',
+        thing2: 'goodbyeeee'
+    },
+    local: 'true'
 })
