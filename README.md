@@ -61,7 +61,7 @@ Require `vault-env/local` and vault-env will not set your environment
 your variables will only be exported by the module as regular variables
 
 ```js
-var secret = require('./vault-env/local')
+var secret = require('vault-env/local')
 
 console.log(secret.DATABASE_URL)
 // => 'postgres://...'
