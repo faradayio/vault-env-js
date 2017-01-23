@@ -115,7 +115,7 @@ module.exports = function prepare (options) {
       if (options.autoRotate) {
         previousValues[secretName] = process.env[secretName]
       }
-      if (!skipEnv) {
+      if (!options.local) {
         process.env[secretName] = data
       }
       varsWritten[secretName] = data

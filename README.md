@@ -57,3 +57,11 @@ vaultEnv.on('DATABASE_URL', function (newDB, oldDB) {
   console.log('DATABASE_URL has changed to ' + newDB + ' from ' + oldDB)
 })
 ```
+Require `vault-env/local` and vault-env will not set your environment
+your variables will only be exported by the module as regular variables
+
+```js
+var secret = require('./vault-env/local')
+console.log(secret.DATABASE_URL)
+// => 'postgres://...'
+```
