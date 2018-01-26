@@ -34,7 +34,7 @@ var logPrefix = bold('vault-env: ')
 
 module.exports = function prepare (options) {
   options = options || {}
-  var VAULT_ADDR = (options.VAULT_ADDR || process.env.VAULT_ADDR || 'http://127.0.0.1:8200').replace(/([^\/])$/, '$1/')
+  var VAULT_ADDR = (options.VAULT_ADDR || process.env.VAULT_ADDR || 'http://127.0.0.1:8200').replace(/([^/])$/, '$1/')
   var VAULT_TOKEN = options.VAULT_TOKEN || process.env.VAULT_TOKEN
   var VAULT_API_VERSION = options.VAULT_API_VERSION || process.env.VAULT_API_VERSION || 'v1'
   var VAULT_ENV_PATH = (
@@ -42,17 +42,20 @@ module.exports = function prepare (options) {
     process.env.VAULT_ENV_PATH ||
     findRoot(process.argv[1] || process.cwd()) + '/Secretfile'
   )
+  var ORIGINAL_SECRETS = options.VAULT_SECRETS
   var varsWritten = {}
   var emitter = new EventEmitter()
 
-  var originalSecrets = parseSecretfile(readFile(VAULT_ENV_PATH, 'utf8'))
+  if (typeof ORIGINAL_SECRETS === 'undefined') {
+    ORIGINAL_SECRETS = parseSecretfile(readFile(VAULT_ENV_PATH, 'utf8'))
+  }
 
   var secretsByPath = {}
   var secretCount = 0
-  Object.keys(originalSecrets).forEach(function (key) {
+  Object.keys(ORIGINAL_SECRETS).forEach(function (key) {
     if (typeof process.env[key] === 'undefined') {
-      var vaultPath = originalSecrets[key][0]
-      var vaultProp = originalSecrets[key][1]
+      var vaultPath = ORIGINAL_SECRETS[key][0]
+      var vaultProp = ORIGINAL_SECRETS[key][1]
       secretsByPath[vaultPath] = secretsByPath[vaultPath] || {}
       secretsByPath[vaultPath][key] = vaultProp
       secretCount++

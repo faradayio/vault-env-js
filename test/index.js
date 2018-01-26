@@ -12,6 +12,7 @@ process.env.SAMPLE = 'hello'
 
 function test (name, options) {
   var secretfile = options.secretfile
+  var secretdata = options.secretdata
   var secrets = options.secrets
   var expected = options.expected
   var overrides = options.overrides
@@ -23,13 +24,18 @@ function test (name, options) {
     for (var key in overrides) {
       process.env[key] = overrides[key]
     }
-    return prepare({
+    var opts = {
       VAULT_ADDR: `http://127.0.0.1:${TEST_PORT}`,
       VAULT_TOKEN: TEST_TOKEN,
-      VAULT_ENV_PATH: secretfilePath,
       silent: false,
       local: local
-    })
+    }
+    if (secretfile) {
+      opts.VAULT_ENV_PATH = secretfilePath
+    } else {
+      opts.VAULT_SECRETS = secretdata
+    }
+    return prepare(opts)
   }
   function cleanup () {
     for (var key in expected) {
@@ -38,7 +44,7 @@ function test (name, options) {
   }
 
   tape(name, function (t) {
-    writeFile(secretfilePath, secretfile)
+    if (secretfile) writeFile(secretfilePath, secretfile)
     var vaultServer = spawn(process.argv[0], [pathJoin(__dirname, '/lib/fakevault.js')], {
       env: {
         TEST_TOKEN: TEST_TOKEN,
@@ -57,10 +63,10 @@ function test (name, options) {
             var mySecret = doIt()
             for (var key in expected) {
               if (!options.local) {
-                  t.equal(process.env[key], expected[key], key + ' should match')
+                t.equal(process.env[key], expected[key], key + ' should match')
               } else {
-                  t.notEqual(process.env[key], expected[key], key + ' should not match')
-                  t.equal(mySecret[key], expected[key], key + ' should match')
+                t.notEqual(process.env[key], expected[key], key + ' should not match')
+                t.equal(mySecret[key], expected[key], key + ' should match')
               }
             }
           }
@@ -177,29 +183,47 @@ test('env substitution', {
 })
 
 test('one var local only', {
-    secretfile: 'thing secret/thing:url',
-    secrets: {
-        'secret/thing': {
-            url: 'hellooooo'
-        }
-    },
-    expected: {
-        thing: 'hellooooo'
-    },
-    local: 'true'
+  secretfile: 'thing secret/thing:url',
+  secrets: {
+    'secret/thing': {
+      url: 'hellooooo'
+    }
+  },
+  expected: {
+    thing: 'hellooooo'
+  },
+  local: 'true'
 })
 
 test('two vars local only', {
-    secretfile: 'thing1 secret/thing:url1\nthing2 secret/thing:url2',
-    secrets: {
-        'secret/thing': {
-            url1: 'hellooooo',
-            url2: 'goodbyeeee'
-        }
-    },
-    expected: {
-        thing1: 'hellooooo',
-        thing2: 'goodbyeeee'
-    },
-    local: 'true'
+  secretfile: 'thing1 secret/thing:url1\nthing2 secret/thing:url2',
+  secrets: {
+    'secret/thing': {
+      url1: 'hellooooo',
+      url2: 'goodbyeeee'
+    }
+  },
+  expected: {
+    thing1: 'hellooooo',
+    thing2: 'goodbyeeee'
+  },
+  local: 'true'
+})
+
+test('passing in data', {
+  secretdata: {
+    thing1: ['secret/thing', ['url1']],
+    thing2: ['secret/thing', ['url2']]
+  },
+  secrets: {
+    'secret/thing': {
+      url1: 'hellooooo',
+      url2: 'goodbyeeee'
+    }
+  },
+  expected: {
+    thing1: 'hellooooo',
+    thing2: 'goodbyeeee'
+  },
+  local: 'true'
 })
