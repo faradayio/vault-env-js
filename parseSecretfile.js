@@ -7,19 +7,20 @@ module.exports = function parseSecretfile (data) {
     if (SECRETFILE_COMMENT_PATTERN.test(line)) return
 
     var matches = SECRETFILE_PATTERN.exec(line)
-    if (!matches) return 'Invalid line ' + i + ': ' + line
+    if (!matches) return 'Invalid line ' + (i + 1) + ': ' + line
 
     var missingEnvVars = []
     var path = matches[2].replace(SECRETFILE_VAR_PATTERN, function (_, a, b) {
-      var envVar = process.env[a || b]
-      if (typeof envVar === 'undefined' && missingEnvVars.indexOf(envVar) !== -1) {
-        missingEnvVars.push(envVar)
+      var envVarName = a || b
+      var envVar = process.env[envVarName]
+      if (typeof envVar === 'undefined' && missingEnvVars.indexOf(envVarName) === -1) {
+        missingEnvVars.push(envVarName)
       }
       return envVar
     })
 
     if (missingEnvVars.length) {
-      return 'Missing environment variables on line ' + i + ' (' + missingEnvVars.join(', ') + ') ' + line
+      return 'Missing from environment: ' + missingEnvVars.join(', ') + ' for line ' + (i + 1) + ' ' + line
     }
 
     return [

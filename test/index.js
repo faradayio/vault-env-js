@@ -129,19 +129,25 @@ test('two env vars', {
 test('one invalid env var', {
   secretfile: '2 secret/thing:url1',
   secrets: {},
-  throws: /Error parsing Secretfile:\nInvalid line 0: 2 secret\/thing:url1/
+  throws: /Error parsing Secretfile:\nInvalid line 1: 2 secret\/thing:url1/
 })
 
 test('two invalid env vars', {
   secretfile: '2 secret/thing:url1\n3 boop:thing',
   secrets: {},
-  throws: /Error parsing Secretfile:\nInvalid line 0: 2 secret\/thing:url1\nInvalid line 1: 3 boop:thing/
+  throws: /Error parsing Secretfile:\nInvalid line 1: 2 secret\/thing:url1\nInvalid line 2: 3 boop:thing/
 })
 
 test('missing secret', {
   secretfile: 'boop secret/thing:url',
   secrets: {},
   throws: /key not found/
+})
+
+test('missing environment variable secret', {
+  secretfile: 'boop secret/$MISSING_VAR:url',
+  secrets: {},
+  throws: /Error parsing Secretfile:\nMissing from environment: MISSING_VAR for line 1 boop secret\/\$MISSING_VAR:url/
 })
 
 test('one invalid secret path', {

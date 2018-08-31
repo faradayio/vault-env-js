@@ -1,6 +1,6 @@
 {
   "name": "vault-env",
-  "version": "4.3.0",
+  "version": "4.3.1",
   "description": "Put your vault secrets in your process.env",
   "main": "main.js",
   "scripts": {
@@ -15,7 +15,7 @@
     "env",
     "hashicorp"
   ],
-  "author": "Tristan Davies <tristan@faraday.io>",
+  "author": "Madeline Davies <madeline@faraday.io>",
   "license": "MIT",
   "dependencies": {
     "find-root": "^1.0.0",
