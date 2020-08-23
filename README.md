@@ -1,4 +1,5 @@
 # vault-env-js
+
 Put your [vault](https://www.vaultproject.io/) secrets in your [process.env](https://nodejs.org/api/process.html#process_process_env)
 
 ![vault-env demo](https://i.imgur.com/W7cyRiP.gif)
@@ -11,16 +12,16 @@ npm install --save vault-env
 
 Write a `Secretfile` in your app directory
 
-```
+```txt
 DATABASE_URL secrets/databases/main:url
 ```
 
 Require `vault-env` and the environment variables are loaded
 
 ```js
-require('vault-env')
+require("vault-env");
 
-console.log(process.env.DATABASE_URL)
+console.log(process.env.DATABASE_URL);
 // => 'postgres://...'
 ```
 
@@ -35,34 +36,35 @@ Require `vault-env/rotate` and vault-env will request new leases before your
 secrets expire, keeping your environment variables up to date forever.
 
 ```js
-require('vault-env/rotate')
+require("vault-env/rotate");
 
 // check the database url
-console.log(process.env.DATABASE_URL)
+console.log(process.env.DATABASE_URL);
 // => 'postgres://username:password@host/db'
 
 // check again in six weeks
 setTimeout(function () {
-  console.log(process.env.DATABASE_URL)
+  console.log(process.env.DATABASE_URL);
   // => 'postgres://user:newpassword@host/db'
-}, 1000 * 60 * 60 * 24 * 7 * 6)
+}, 1000 * 60 * 60 * 24 * 7 * 6);
 ```
 
 Watch for secret changes
 
 ```js
-var vaultEnv = require('vault-env/rotate')
+var vaultEnv = require("vault-env/rotate");
 
-vaultEnv.on('DATABASE_URL', function (newDB, oldDB) {
-  console.log('DATABASE_URL has changed to ' + newDB + ' from ' + oldDB)
-})
+vaultEnv.on("DATABASE_URL", function (newDB, oldDB) {
+  console.log("DATABASE_URL has changed to " + newDB + " from " + oldDB);
+});
 ```
+
 Require `vault-env/local` and vault-env will not set your environment
 your variables will only be exported by the module as regular variables
 
 ```js
-var secret = require('vault-env/local')
+var secret = require("vault-env/local");
 
-console.log(secret.DATABASE_URL)
+console.log(secret.DATABASE_URL);
 // => 'postgres://...'
 ```
