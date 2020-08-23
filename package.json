@@ -1,6 +1,6 @@
 {
   "name": "vault-env",
-  "version": "5.0.0-alpha.1",
+  "version": "5.0.0-alpha.2",
   "description": "Put your vault secrets in your process.env",
   "main": "main.js",
   "types": "main.d.ts",
@@ -8,6 +8,11 @@
     "*.d.ts",
     "*.js"
   ],
+  "homepage": "https://github.com/faradayio/vault-env-js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/faradayio/vault-env-js.git"
+  },
   "scripts": {
     "clean": "rm -f *.d.ts *.js test/*.d.ts test/index.js test/fakeVault*.js",
     "build": "tsc",
