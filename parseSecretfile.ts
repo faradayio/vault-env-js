@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert = require("assert");
 
 const SECRETFILE_PATTERN = /^([a-zA-Z_][a-zA-Z0-9_]+)\s+([^:\s]+):(.+)$/;
 const SECRETFILE_COMMENT_PATTERN = /(^#)|(^\s*$)/;

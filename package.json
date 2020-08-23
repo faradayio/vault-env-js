@@ -2,21 +2,22 @@
   "name": "vault-env",
   "version": "4.3.1",
   "description": "Put your vault secrets in your process.env",
-  "main": "dist/src/main.js",
-  "types": "dist/src/main.d.ts",
+  "main": "main.js",
+  "types": "main.d.ts",
   "files": [
-    "dist/src/**/*.d.ts",
-    "dist/src/**/*.js"
+    "*.d.ts",
+    "*.js"
   ],
   "scripts": {
+    "clean": "rm -f *.d.ts *.js test/*.d.ts test/index.js test/fakeVault*.js",
     "build": "tsc",
     "fmt": "prettier --write .",
-    "lint": "eslint src/**/*.ts test/**/*.ts",
-    "prepublish": "rm -rf dist && npm run build",
+    "lint": "eslint *.ts test/**/*.ts",
+    "prepublishOnly": "npm run clean && npm run build",
     "test": "mocha -r ts-node/register test/index.ts"
   },
   "bin": {
-    "vault-env": "dist/src/cli.js"
+    "vault-env": "cli.js"
   },
   "keywords": [
     "vault",

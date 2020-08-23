@@ -10,5 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - All `Secretfile` entries must now have the form `VAR_NAME path/to/secret:key`. We no longer support values which are missing `:key`, or which have or nested `:key1:key1`.
+- The return type of `parseSecretfile` has changed.
 - The code has been ported to TypeScript.
 - All dependencies have been updated.

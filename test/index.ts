@@ -1,8 +1,8 @@
-import assert from "assert";
+import assert = require("assert");
 import { writeFileSync as writeFile } from "fs";
 import { fileSync as tmpFile } from "tmp";
-import { SecretSource } from "../src/parseSecretfile";
-import prepare, { Options } from "../src/prepare";
+import { SecretSource } from "../parseSecretfile";
+import prepare, { Options } from "../prepare";
 import { FakeVaultServer } from "./fakeVault";
 
 const TEST_PORT = 39582;
