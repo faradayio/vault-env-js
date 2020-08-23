@@ -25,6 +25,9 @@
     "hashicorp"
   ],
   "author": "Madeline Davies <madeline@faraday.io>",
+  "maintainers": [
+    "Eric Kidd <eric.kidd@faraday.io>"
+  ],
   "license": "MIT",
   "dependencies": {
     "find-root": "^1.0.0",
