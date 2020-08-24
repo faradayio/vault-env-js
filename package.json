@@ -34,9 +34,6 @@
     "sync-request": "^6.1.0",
     "then-request": "^6.0.2"
   },
-  "pre-commit": [
-    "lint"
-  ],
   "devDependencies": {
     "@types/find-root": "^1.1.1",
     "@types/mocha": "^8.0.3",
@@ -47,7 +44,6 @@
     "eslint": "^7.6.0",
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-prettier": "^3.1.4",
-    "git-validate": "^2.1.4",
     "mocha": "^8.1.1",
     "prettier": "^2.0.5",
     "tmp": "^0.2.1",
