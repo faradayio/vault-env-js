@@ -149,6 +149,12 @@ export default function prepare(
         "X-Vault-Token": VAULT_TOKEN,
       },
     });
+    if (response.statusCode == 403) {
+      console.error(
+        "vault responded with 403 access denied when i tried to rotate, giving up"
+      );
+      return;
+    }
     if (sync) {
       onLease(vaultPath, parseLeaseResponse(response));
     } else {
