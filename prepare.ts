@@ -143,13 +143,21 @@ export default function prepare(
 
   class RetryAuthFailure extends Error {}
 
-  function checkStatusCode(response: Response) {
+  function hasValidStatusCode(response: Response) {
     if (response.statusCode == 403) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  function checkStatusCode(response: Response) {
+    if (hasValidStatusCode(response)) {
+      return response;
+    } else {
       throw new RetryAuthFailure(
         "vault responded with 403 access denied when i tried to rotate, giving up"
       );
-    } else {
-      return response;
     }
   }
 
@@ -161,13 +169,12 @@ export default function prepare(
           "X-Vault-Token": VAULT_TOKEN,
         },
       });
-      try {
-        onLease(vaultPath, parseLeaseResponse(checkStatusCode(response)));
-      } catch (e) {
-        console.error(e.message);
-        if (!(e instanceof RetryAuthFailure)) {
-          throw e;
-        }
+      if (hasValidStatusCode(response)) {
+        onLease(vaultPath, parseLeaseResponse(response));
+      } else {
+        console.error(
+          "vault responded with 403 access denied when i tried to rotate, giving up"
+        );
       }
     } else {
       const response = asyncRequest("GET", fullUrl, {
