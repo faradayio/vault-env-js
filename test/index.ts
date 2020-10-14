@@ -96,6 +96,9 @@ function test(name: string, options: TestOptions) {
 }
 
 describe("vault-env", function () {
+  // up from 2
+  this.timeout(5000);
+
   test("one env var", {
     secretfile: "thing secret/thing:url",
     secrets: {
