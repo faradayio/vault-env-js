@@ -141,6 +141,18 @@ export default function prepare(
         VAULT_ADDR
     );
 
+  class RetryAuthFailure extends Error {}
+
+  function checkStatusCode(response: Response) {
+    if (response.statusCode == 403) {
+      throw new RetryAuthFailure(
+        "vault responded with 403 access denied when i tried to rotate, giving up"
+      );
+    } else {
+      return response;
+    }
+  }
+
   function getNewLease(vaultPath: string, sync: boolean) {
     const req = sync ? request : asyncRequest;
     const fullUrl = VAULT_ADDR + VAULT_API_VERSION + "/" + vaultPath;
@@ -149,14 +161,15 @@ export default function prepare(
         "X-Vault-Token": VAULT_TOKEN,
       },
     });
-    if (response.statusCode == 403) {
-      console.error(
-        "vault responded with 403 access denied when i tried to rotate, giving up"
-      );
-      return;
-    }
     if (sync) {
-      onLease(vaultPath, parseLeaseResponse(response));
+      try {
+        onLease(vaultPath, parseLeaseResponse(checkStatusCode(response)));
+      } catch (e) {
+        console.error(e.message);
+        if (!(e instanceof RetryAuthFailure)) {
+          throw e;
+        }
+      }
     } else {
       !options.silent &&
         console.log(
@@ -165,6 +178,7 @@ export default function prepare(
             Object.keys(secretsByPath[vaultPath]).join(", ")
         );
       Promise.resolve(response)
+        .then(checkStatusCode)
         .then(parseLeaseResponse)
         .then(onLease.bind(null, vaultPath))
         .catch(function retry(err: { stack?: string }) {
@@ -172,8 +186,10 @@ export default function prepare(
             logPrefix + "ERROR trying to rotate lease " + vaultPath
           );
           console.error(logPrefix + (err && err.stack ? err.stack : err));
-          console.error("retrying in 1s");
-          setTimeout(getNewLease.bind(null, vaultPath), 1000);
+          if (!(e instanceof RetryAuthFailure)) {
+            console.error("retrying in 1s");
+            setTimeout(getNewLease.bind(null, vaultPath), 1000);
+          }
         });
     }
   }
