@@ -141,17 +141,40 @@ export default function prepare(
         VAULT_ADDR
     );
 
-  function getNewLease(vaultPath: string, sync: boolean) {
-    const req = sync ? request : asyncRequest;
-    const fullUrl = VAULT_ADDR + VAULT_API_VERSION + "/" + vaultPath;
-    const response = req("GET", fullUrl, {
-      headers: {
-        "X-Vault-Token": VAULT_TOKEN,
-      },
-    });
-    if (sync) {
-      onLease(vaultPath, parseLeaseResponse(response));
+  class RetryAuthFailure extends Error {}
+
+  function checkStatusCode(response: Response) {
+    if (response.statusCode == 403) {
+      throw new RetryAuthFailure(
+        "vault responded with 403 access denied when i tried to rotate, giving up"
+      );
     } else {
+      return response;
+    }
+  }
+
+  function getNewLease(vaultPath: string, sync: boolean) {
+    const fullUrl = VAULT_ADDR + VAULT_API_VERSION + "/" + vaultPath;
+    if (sync) {
+      const response = request("GET", fullUrl, {
+        headers: {
+          "X-Vault-Token": VAULT_TOKEN,
+        },
+      });
+      try {
+        onLease(vaultPath, parseLeaseResponse(checkStatusCode(response)));
+      } catch (e) {
+        console.error(e.message);
+        if (!(e instanceof RetryAuthFailure)) {
+          throw e;
+        }
+      }
+    } else {
+      const response = asyncRequest("GET", fullUrl, {
+        headers: {
+          "X-Vault-Token": VAULT_TOKEN,
+        },
+      });
       !options.silent &&
         console.log(
           logPrefix +
@@ -159,6 +182,7 @@ export default function prepare(
             Object.keys(secretsByPath[vaultPath]).join(", ")
         );
       Promise.resolve(response)
+        .then(checkStatusCode)
         .then(parseLeaseResponse)
         .then(onLease.bind(null, vaultPath))
         .catch(function retry(err: { stack?: string }) {
@@ -166,8 +190,10 @@ export default function prepare(
             logPrefix + "ERROR trying to rotate lease " + vaultPath
           );
           console.error(logPrefix + (err && err.stack ? err.stack : err));
-          console.error("retrying in 1s");
-          setTimeout(getNewLease.bind(null, vaultPath), 1000);
+          if (!(err instanceof RetryAuthFailure)) {
+            console.error("retrying in 1s");
+            setTimeout(getNewLease.bind(null, vaultPath), 1000);
+          }
         });
     }
   }
