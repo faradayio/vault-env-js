@@ -186,7 +186,7 @@ export default function prepare(
             logPrefix + "ERROR trying to rotate lease " + vaultPath
           );
           console.error(logPrefix + (err && err.stack ? err.stack : err));
-          if (!(e instanceof RetryAuthFailure)) {
+          if (!(err instanceof RetryAuthFailure)) {
             console.error("retrying in 1s");
             setTimeout(getNewLease.bind(null, vaultPath), 1000);
           }
