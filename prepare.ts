@@ -154,14 +154,18 @@ export default function prepare(
   }
 
   function getNewLease(vaultPath: string, sync: boolean) {
-    const req = sync ? request : asyncRequest;
     const fullUrl = VAULT_ADDR + VAULT_API_VERSION + "/" + vaultPath;
-    const response = req("GET", fullUrl, {
-      headers: {
-        "X-Vault-Token": VAULT_TOKEN,
+    const requestArgs = [
+      "GET",
+      fullUrl,
+      {
+        headers: {
+          "X-Vault-Token": VAULT_TOKEN,
+        },
       },
-    });
+    ];
     if (sync) {
+      const response = request(...requestArgs);
       try {
         onLease(vaultPath, parseLeaseResponse(checkStatusCode(response)));
       } catch (e) {
@@ -171,6 +175,7 @@ export default function prepare(
         }
       }
     } else {
+      const response = asyncRequest(...requestArgs);
       !options.silent &&
         console.log(
           logPrefix +
