@@ -29,7 +29,14 @@ interface Lease {
 
 /** Fetch a lease response and parse it. */
 function parseLeaseResponse(response: Response | ResponsePromise): Lease {
-  return JSON.parse(response.getBody().toString());
+  const parsed = JSON.parse(response.getBody().toString());
+
+  // v2 keys look a bit different than v1
+  if (parsed.data.data) {
+    return parsed.data;
+  }
+
+  return parsed;
 }
 
 function formatText(text: string, before: number, after: number): string {
@@ -67,6 +74,11 @@ export interface Options {
 
 // We have historically supported two entirely different return values, so we
 // need to overload our exported type below.
+
+export type V1Secret = Record<string, Record<string, string>>;
+export type V2Secret = {
+  [key: string]: V1Secret
+};
 
 /**
  * Configure this library to fetch secrets from Vault.
@@ -161,6 +173,7 @@ export default function prepare(
           "X-Vault-Token": VAULT_TOKEN,
         },
       });
+
       try {
         onLease(vaultPath, parseLeaseResponse(checkStatusCode(response)));
       } catch (e) {
