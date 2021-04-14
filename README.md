@@ -32,6 +32,13 @@ you run it.
 VAULT_ADDR=https://localhost:8200 VAULT_TOKEN=12345 node ./app.js
 ```
 
+Alternatively, you can login with an Approle token id:
+
+```console
+VAULT_APPROLE_NAME=approle VAULT_APPROLE_ID=abc-123-000 VAULT_APPROLE_SECRET_ID=zyx-987-000 node ./app.js
+```
+
+
 Require `vault-env/rotate` and vault-env will request new leases before your
 secrets expire, keeping your environment variables up to date forever.
 

@@ -11,7 +11,7 @@ import assert from "assert";
  * requests.
  */
 export default function fakeVault(options: FakeVaultOptions): Server {
-  console.log("starting fake Vault with", options);
+  console.log("starting fake Vault with", JSON.stringify(options, null, 2));
   const { token, port, secrets } = options;
 
   return createServer(function responder(req, res) {

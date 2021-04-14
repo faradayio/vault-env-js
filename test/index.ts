@@ -2,7 +2,7 @@ import assert = require("assert");
 import { writeFileSync as writeFile } from "fs";
 import { fileSync as tmpFile } from "tmp";
 import { SecretSource } from "../parseSecretfile";
-import prepare, { Options } from "../prepare";
+import prepare, { Options, V1Secret, V2Secret } from "../prepare";
 import { FakeVaultServer } from "./fakeVault";
 
 const TEST_PORT = 39582;
@@ -11,7 +11,7 @@ process.env.SAMPLE = "hello";
 
 interface TestOptions {
   secretfile?: string;
-  secrets: Record<string, Record<string, string>>;
+  secrets: V1Secret | V2Secret;
   expected?: Record<string, string>;
   overrides?: Record<string, string>;
   throws?: RegExp;
@@ -61,7 +61,9 @@ function test(name: string, options: TestOptions) {
       port: TEST_PORT,
       secrets,
     });
+
     await vaultServer.waitUntilReady();
+
     try {
       if (throws) {
         assert.throws(doIt, throws);
@@ -236,6 +238,26 @@ describe("vault-env", function () {
     expected: {
       thing1: "hellooooo",
       thing2: "goodbyeeee",
+    },
+    local: true,
+  });
+
+  test('v2 secrets', {
+    secretdata: {
+      thing1: { vaultPath: "secret/2thing", vaultProp: "first" },
+      thing2: { vaultPath: "secret/2thing", vaultProp: "second" },
+    },
+    secrets: {
+      "secret/2thing": {
+        "data": {
+          "first": "testing testing",
+          "second": "123 123 123",
+        }
+      },
+    },
+    expected: {
+      thing1: "testing testing",
+      thing2: "123 123 123",
     },
     local: true,
   });
