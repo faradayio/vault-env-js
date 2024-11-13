@@ -128,7 +128,9 @@ export default function prepare(
       }
 
       retries++;
-      setTimeout(() => {}, 2000); // wait 2s
+      setTimeout(() => {
+        console.log("Waiting");
+      }, 2000); // wait 2s
     }
   }
 
