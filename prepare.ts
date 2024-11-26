@@ -56,6 +56,7 @@ const logPrefix = bold("vault-env: ");
 export interface Options {
   VAULT_ADDR?: string;
   VAULT_TOKEN?: string;
+  VAULT_TOKEN_PATH?: string;
   VAULT_API_VERSION?: string;
   VAULT_ENV_PATH?: string;
   VAULT_SECRETS?: Record<string, SecretSource>;
@@ -100,7 +101,41 @@ export default function prepare(
     process.env.VAULT_ADDR ||
     "http://127.0.0.1:8200"
   ).replace(/([^/])$/, "$1/");
-  const VAULT_TOKEN = options.VAULT_TOKEN || process.env.VAULT_TOKEN;
+  let vault_token = options.VAULT_TOKEN || process.env.VAULT_TOKEN;
+  const VAULT_TOKEN_PATH =
+    options.VAULT_TOKEN_PATH || process.env.VAULT_TOKEN_PATH;
+
+  if (VAULT_TOKEN_PATH && vault_token) {
+    console.log(
+      "Both VAULT_TOKEN and VAULT_TOKEN_PATH are set, using VAULT_TOKEN"
+    );
+  } else if (VAULT_TOKEN_PATH) {
+    let retries = 0;
+    console.log("Fetching vault token from path: " + VAULT_TOKEN_PATH);
+
+    while (retries < 5) {
+      try {
+        const token = readFile(VAULT_TOKEN_PATH, "utf8").trim();
+        if (token) {
+          process.env.VAULT_TOKEN = token;
+          vault_token = token;
+          break;
+        }
+      } catch (e) {
+        console.error(
+          logPrefix +
+            "Failed to read VAULT_TOKEN_PATH, retrying in 2s: " +
+            e.message
+        );
+      }
+
+      retries++;
+      setTimeout(() => {
+        console.log("Waiting");
+      }, 2000); // wait 2s
+    }
+  }
+
   const VAULT_API_VERSION =
     options.VAULT_API_VERSION || process.env.VAULT_API_VERSION || "v1";
   const VAULT_ENV_PATH =
@@ -125,7 +160,7 @@ export default function prepare(
     }
   });
 
-  if (secretCount && !VAULT_TOKEN) {
+  if (secretCount && !vault_token) {
     throw new Error("Expected VAULT_TOKEN to be set");
   }
 
@@ -158,7 +193,7 @@ export default function prepare(
     if (sync) {
       const response = request("GET", fullUrl, {
         headers: {
-          "X-Vault-Token": VAULT_TOKEN,
+          "X-Vault-Token": vault_token,
         },
       });
       try {
@@ -172,7 +207,7 @@ export default function prepare(
     } else {
       const response = asyncRequest("GET", fullUrl, {
         headers: {
-          "X-Vault-Token": VAULT_TOKEN,
+          "X-Vault-Token": vault_token,
         },
       });
       !options.silent &&
