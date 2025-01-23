@@ -29,7 +29,14 @@ interface Lease {
 
 /** Fetch a lease response and parse it. */
 function parseLeaseResponse(response: Response | ResponsePromise): Lease {
-  return JSON.parse(response.getBody().toString());
+  const parsed = JSON.parse(response.getBody().toString());
+
+  // v2 keys look a bit different than v1
+  if (parsed.data.data) {
+    return parsed.data;
+  }
+
+  return parsed;
 }
 
 function formatText(text: string, before: number, after: number): string {
@@ -59,6 +66,9 @@ export interface Options {
   VAULT_API_VERSION?: string;
   VAULT_ENV_PATH?: string;
   VAULT_SECRETS?: Record<string, SecretSource>;
+  VAULT_APPROLE_ID?: string;
+  VAULT_APPROLE_SECRET_ID?: string;
+  VAULT_APPROLE_NAME?: string;
   silent?: boolean;
   autoRotate?: boolean;
   local?: boolean;
@@ -67,6 +77,11 @@ export interface Options {
 
 // We have historically supported two entirely different return values, so we
 // need to overload our exported type below.
+
+export type V1Secret = Record<string, Record<string, string>>;
+export type V2Secret = {
+  [key: string]: V1Secret
+};
 
 /**
  * Configure this library to fetch secrets from Vault.
@@ -100,20 +115,19 @@ export default function prepare(
     process.env.VAULT_ADDR ||
     "http://127.0.0.1:8200"
   ).replace(/([^/])$/, "$1/");
-  const VAULT_TOKEN = options.VAULT_TOKEN || process.env.VAULT_TOKEN;
-  const VAULT_API_VERSION =
-    options.VAULT_API_VERSION || process.env.VAULT_API_VERSION || "v1";
-  const VAULT_ENV_PATH =
-    options.VAULT_ENV_PATH ||
-    process.env.VAULT_ENV_PATH ||
-    findRoot(process.argv[1] || process.cwd()) + "/Secretfile";
-  const ORIGINAL_SECRETS =
-    options.VAULT_SECRETS ?? parseSecretfile(readFile(VAULT_ENV_PATH, "utf8"));
+
+  let VAULT_TOKEN = options.VAULT_TOKEN || process.env.VAULT_TOKEN;
+  const VAULT_APPROLE_ID = options.VAULT_APPROLE_ID || process.env.VAULT_APPROLE_ID;
+  const VAULT_APPROLE_SECRET_ID = options.VAULT_APPROLE_SECRET_ID || process.env.VAULT_APPROLE_SECRET_ID;
+  const VAULT_APPROLE_NAME = options.VAULT_APPROLE_NAME || process.env.VAULT_APPROLE_NAME;
+  const VAULT_API_VERSION = options.VAULT_API_VERSION || process.env.VAULT_API_VERSION || "v1";
+  const VAULT_ENV_PATH = options.VAULT_ENV_PATH || process.env.VAULT_ENV_PATH || findRoot(process.argv[1] || process.cwd()) + "/Secretfile";
+  const ORIGINAL_SECRETS = options.VAULT_SECRETS ?? parseSecretfile(readFile(VAULT_ENV_PATH, "utf8"));
   const varsWritten: Record<string, string> = {};
   const emitter = new EventEmitter();
-
   const secretsByPath: Record<string, Record<string, string>> = {};
   let secretCount = 0;
+
   Object.keys(ORIGINAL_SECRETS).forEach(function (key) {
     if (typeof process.env[key] === "undefined") {
       const { vaultPath, vaultProp } = ORIGINAL_SECRETS[key];
@@ -125,8 +139,34 @@ export default function prepare(
     }
   });
 
-  if (secretCount && !VAULT_TOKEN) {
-    throw new Error("Expected VAULT_TOKEN to be set");
+  if (!VAULT_TOKEN && VAULT_APPROLE_NAME && VAULT_APPROLE_ID && VAULT_APPROLE_SECRET_ID) {
+    try {
+      const fullUrl = `${VAULT_ADDR}${VAULT_API_VERSION}/auth/${VAULT_APPROLE_NAME}/login`;
+      const approleResult = request("POST", fullUrl, {
+        json: {
+          role_id: VAULT_APPROLE_ID,
+          secret_id: VAULT_APPROLE_SECRET_ID,
+        }
+      });
+
+      const body = approleResult.getBody().toString();
+      const result = JSON.parse(body);
+
+      if (result && result.auth) {
+        VAULT_TOKEN = result.auth.client_token;
+        process.env.VAULT_TOKEN = VAULT_TOKEN;
+      } else {
+        throw new Error(`Unable to login with approle details`);
+      }
+    } catch (ex) {
+      console.log('Error logging in with approle details');
+      console.log(ex);
+      throw new Error(ex);
+    }
+  }
+
+  if (secretCount && !VAULT_TOKEN && (!VAULT_APPROLE_NAME || !VAULT_APPROLE_ID || !VAULT_APPROLE_SECRET_ID)) {
+    throw new Error("Expected VAULT_TOKEN or VAULT_APPROLE_NAME, VAULT_APPROLE_ID, and VAULT_APPROLE_SECRET_ID to be set");
   }
 
   !options.silent &&
@@ -161,6 +201,7 @@ export default function prepare(
           "X-Vault-Token": VAULT_TOKEN,
         },
       });
+
       try {
         onLease(vaultPath, parseLeaseResponse(checkStatusCode(response)));
       } catch (e) {

@@ -1,4 +1,5 @@
 import { Worker } from "worker_threads";
+import { V1Secret, V2Secret } from '../prepare';
 
 /** Options for our fake Vault server. */
 export interface FakeVaultOptions {
@@ -7,7 +8,7 @@ export interface FakeVaultOptions {
   /** The port to listen on. */
   port: number;
   /** The secrets to serve. */
-  secrets: Record<string, Record<string, string>>;
+  secrets: V1Secret | V2Secret;
 }
 
 /**
