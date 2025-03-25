@@ -1,6 +1,6 @@
 {
   "name": "vault-env",
-  "version": "5.0.0-beta.2",
+  "version": "5.0.0-beta.3",
   "description": "Put your vault secrets in your process.env",
   "main": "main.js",
   "types": "main.d.ts",
@@ -44,7 +44,7 @@
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-prettier": "^3.1.4",
-    "mocha": "^10.8.2",
+    "mocha": "^11.0.1",
     "prettier": "^2.1.2",
     "tmp": "^0.2.1",
     "ts-node": "^9.0.0",
