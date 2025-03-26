@@ -122,11 +122,15 @@ export default function prepare(
           break;
         }
       } catch (e) {
-        console.error(
-          logPrefix +
-            "Failed to read VAULT_TOKEN_PATH, retrying in 2s: " +
-            e.message
-        );
+        if (e instanceof Error) {
+          console.error(
+            logPrefix +
+              "Failed to read VAULT_TOKEN_PATH, retrying in 2s: " +
+              e.message
+          );
+        } else {
+          console.error("An unknown error occurred.");
+        }
       }
 
       retries++;
@@ -199,7 +203,9 @@ export default function prepare(
       try {
         onLease(vaultPath, parseLeaseResponse(checkStatusCode(response)));
       } catch (e) {
-        console.error(e.message);
+        if (e instanceof Error) {
+          console.error(e.message);
+        }
         if (!(e instanceof RetryAuthFailure)) {
           throw e;
         }
