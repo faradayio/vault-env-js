@@ -1,6 +1,6 @@
 {
   "name": "vault-env",
-  "version": "5.0.0",
+  "version": "5.0.3",
   "description": "Put your vault secrets in your process.env",
   "main": "main.js",
   "types": "main.d.ts",
