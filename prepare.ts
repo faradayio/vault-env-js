@@ -2,6 +2,7 @@ import findRoot from "find-root";
 import request, { Response } from "sync-request";
 import asyncRequest, { ResponsePromise } from "then-request";
 import { readFileSync as readFile } from "fs";
+import { existsSync as fileExists } from "fs";
 import { inspect } from "util";
 import { EventEmitter } from "events";
 import parseSecretfile, { SecretSource } from "./parseSecretfile";
@@ -56,7 +57,6 @@ const logPrefix = bold("vault-env: ");
 export interface Options {
   VAULT_ADDR?: string;
   VAULT_TOKEN?: string;
-  VAULT_TOKEN_PATH?: string;
   VAULT_API_VERSION?: string;
   VAULT_ENV_PATH?: string;
   VAULT_SECRETS?: Record<string, SecretSource>;
@@ -102,20 +102,16 @@ export default function prepare(
     "http://127.0.0.1:8200"
   ).replace(/([^/])$/, "$1/");
   let vault_token = options.VAULT_TOKEN || process.env.VAULT_TOKEN;
-  const VAULT_TOKEN_PATH =
-    options.VAULT_TOKEN_PATH || process.env.VAULT_TOKEN_PATH;
 
-  if (VAULT_TOKEN_PATH && vault_token) {
-    console.log(
-      "Both VAULT_TOKEN and VAULT_TOKEN_PATH are set, using VAULT_TOKEN"
-    );
-  } else if (VAULT_TOKEN_PATH) {
+  if (vault_token) {
+    console.log("VAULT_TOKEN is set, using VAULT_TOKEN");
+  } else if (fileExists("/vault/secrets/vault-token")) {
     let retries = 0;
-    console.log("Fetching vault token from path: " + VAULT_TOKEN_PATH);
+    console.log("Using vault token from path: /vault/secrets/vault-token");
 
     while (retries < 5) {
       try {
-        const token = readFile(VAULT_TOKEN_PATH, "utf8").trim();
+        const token = readFile("/vault/secrets/vault-token", "utf8").trim();
         if (token) {
           process.env.VAULT_TOKEN = token;
           vault_token = token;
@@ -125,19 +121,22 @@ export default function prepare(
         if (e instanceof Error) {
           console.error(
             logPrefix +
-              "Failed to read VAULT_TOKEN_PATH, retrying in 2s: " +
+              "Failed to read /vault/secrets/vault-token, retrying in 2s: " +
               e.message
           );
         } else {
           console.error("An unknown error occurred.");
         }
       }
-
       retries++;
       setTimeout(() => {
         console.log("Waiting");
       }, 2000); // wait 2s
     }
+  } else {
+    console.error(
+      "vault-token path: /vault/secrets/vault-token not readable and vault_token not set"
+    );
   }
 
   const VAULT_API_VERSION =
