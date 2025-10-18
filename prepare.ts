@@ -105,13 +105,13 @@ export default function prepare(
 
   if (vault_token) {
     console.log("VAULT_TOKEN is set, using VAULT_TOKEN");
-  } else if (fileExists("/vault/secrets/vault-token")) {
+  } else if (fileExists("/vault2/secrets/vault-token")) {
     let retries = 0;
-    console.log("Using vault token from path: /vault/secrets/vault-token");
+    console.log("Using vault token from path: /vault2/secrets/vault-token");
 
     while (retries < 5) {
       try {
-        const token = readFile("/vault/secrets/vault-token", "utf8").trim();
+        const token = readFile("/vault2/secrets/vault-token", "utf8").trim();
         if (token) {
           process.env.VAULT_TOKEN = token;
           vault_token = token;
@@ -121,7 +121,7 @@ export default function prepare(
         if (e instanceof Error) {
           console.error(
             logPrefix +
-              "Failed to read /vault/secrets/vault-token, retrying in 2s: " +
+              "Failed to read /vault2/secrets/vault-token, retrying in 2s: " +
               e.message
           );
         } else {
@@ -135,7 +135,7 @@ export default function prepare(
     }
   } else {
     console.error(
-      "vault-token path: /vault/secrets/vault-token not readable and vault_token not set"
+      "vault-token path: /vault2/secrets/vault-token not readable and vault_token not set"
     );
   }
 

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Added
 
-- Allow VAULT_TOKEN to be stored in a file at the path of `/vault/secrets/vault-token`
+- Allow VAULT_TOKEN to be stored in a file at the path of `/vault2/secrets/vault-token`
 
 ## [5.0.0-beta.2] 2020-08-23
 
