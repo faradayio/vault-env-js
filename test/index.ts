@@ -267,4 +267,11 @@ describe("vault-env", function () {
     expected: { thing: "viaproxy" },
     noToken: true,
   });
+
+  test("initial fetch retries a transient failure then succeeds", {
+    secretfile: "thing secret/thing:url",
+    secrets: { "secret/thing": { url: "eventually" } },
+    expected: { thing: "eventually" },
+    failFirstRequests: 2,
+  });
 });
