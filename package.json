@@ -14,7 +14,7 @@
     "fmt": "prettier --write .",
     "lint": "eslint *.ts test/**/*.ts",
     "prepublishOnly": "npm run clean && npm run build",
-    "test": "mocha -r ts-node/register test/index.ts"
+    "test": "NODE_OPTIONS=\"--no-experimental-strip-types\" mocha -r ts-node/register test/index.ts"
   },
   "bin": {
     "vault-env": "cli.js"

@@ -12,12 +12,23 @@ import assert from "assert";
  */
 export default function fakeVault(options: FakeVaultOptions): Server {
   console.log("starting fake Vault with", options);
-  const { token, port, secrets } = options;
+  const { token, port, secrets, acceptAnyToken, failFirstRequests } = options;
+  let requestCount = 0;
 
   return createServer(function responder(req, res) {
     console.log(`received request at ${req.url}`);
     if (req.url == null)
       throw new Error("expected Vault request to include a URL");
+
+    // If configured to fail first N requests, return 503 early.
+    if (failFirstRequests !== undefined && requestCount < failFirstRequests) {
+      requestCount++;
+      res.writeHead(503);
+      res.end("simulated transient failure (request " + requestCount + ")");
+      return;
+    }
+    requestCount++;
+
     let key = req.url.slice(1);
     const version = key.slice(0, 2);
     key = key.slice(3);
@@ -27,6 +38,22 @@ export default function fakeVault(options: FakeVaultOptions): Server {
     } else if (req.method !== "GET") {
       res.writeHead(404);
       res.end("only get method is allowed");
+    } else if (acceptAnyToken) {
+      // Proxy mode: assert no X-Vault-Token header is present.
+      if (req.headers["x-vault-token"] !== undefined) {
+        res.writeHead(400);
+        res.end(
+          "proxy mode: expected no X-Vault-Token header but got: " +
+            req.headers["x-vault-token"]
+        );
+      } else if (typeof secrets[key] === "undefined") {
+        res.writeHead(404);
+        res.end("key not found " + key);
+      } else {
+        res.writeHead(200);
+        res.end(JSON.stringify({ data: secrets[key] }));
+        delete secrets[key];
+      }
     } else if (req.headers["x-vault-token"] !== token) {
       res.writeHead(503);
       res.end("invalid token");

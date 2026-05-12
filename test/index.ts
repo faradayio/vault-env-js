@@ -17,6 +17,10 @@ interface TestOptions {
   throws?: RegExp;
   local?: boolean;
   secretdata?: Record<string, SecretSource>;
+  /** When true, omit VAULT_TOKEN — exercises proxy mode. */
+  noToken?: boolean;
+  /** Fail the first N requests with 503 to exercise the retry logic. */
+  failFirstRequests?: number;
 }
 
 /** Create a test case. */
@@ -29,18 +33,28 @@ function test(name: string, options: TestOptions) {
   const throws = options.throws;
   const local = options.local;
   const secretfilePath = tmpFile().name;
+  const noToken = options.noToken;
+  const failFirstRequests = options.failFirstRequests;
+
+  let savedVaultToken: string | undefined;
 
   function doIt() {
     for (const key in overrides) {
       process.env[key] = overrides[key];
     }
+    if (noToken) {
+      savedVaultToken = process.env.VAULT_TOKEN;
+      delete process.env.VAULT_TOKEN;
+    }
     const opts: Options & { autoRotate: false } = {
       VAULT_ADDR: `http://127.0.0.1:${TEST_PORT}`,
-      VAULT_TOKEN: TEST_TOKEN,
       silent: false,
       local: local,
       autoRotate: false,
     };
+    if (!noToken) {
+      opts.VAULT_TOKEN = TEST_TOKEN;
+    }
     if (secretfile) {
       opts.VAULT_ENV_PATH = secretfilePath;
     } else {
@@ -52,6 +66,11 @@ function test(name: string, options: TestOptions) {
     for (const key in expected) {
       delete process.env[key];
     }
+    if (noToken) {
+      if (savedVaultToken !== undefined) {
+        process.env.VAULT_TOKEN = savedVaultToken;
+      }
+    }
   }
 
   it(name, async () => {
@@ -60,6 +79,8 @@ function test(name: string, options: TestOptions) {
       token: TEST_TOKEN,
       port: TEST_PORT,
       secrets,
+      acceptAnyToken: noToken ? true : undefined,
+      failFirstRequests,
     });
     await vaultServer.waitUntilReady();
     try {
@@ -238,5 +259,12 @@ describe("vault-env", function () {
       thing2: "goodbyeeee",
     },
     local: true,
+  });
+
+  test("proxy mode: no token, server gets the request with no X-Vault-Token", {
+    secretfile: "thing secret/thing:url",
+    secrets: { "secret/thing": { url: "viaproxy" } },
+    expected: { thing: "viaproxy" },
+    noToken: true,
   });
 });
