@@ -52,6 +52,14 @@ function blue(text: string): string {
 
 const logPrefix = bold("vault-env: ");
 
+/** Block the current thread for `ms` ms (sync — for the initial, synchronous
+ *  secret fetch only). */
+function sleepSync(ms: number): void {
+  // Atomics.wait on a throwaway SharedArrayBuffer is the cleanest way to block
+  // synchronously in Node without a busy-loop.
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
 /** Vault initialization options. */
 export interface Options {
   VAULT_ADDR?: string;
@@ -259,6 +267,22 @@ export default function prepare(
     }
   }
 
+  const MAX_INITIAL_FETCH_ATTEMPTS = 6;
+  function isTransient(err: unknown): boolean {
+    // A RetryAuthFailure (403) is caught and NOT re-thrown inside getNewLease,
+    // so it never reaches here — but guard anyway: a 403 is a real config error.
+    if (err instanceof RetryAuthFailure) return false;
+    const msg = err instanceof Error ? err.message : String(err);
+    // sync-request surfaces connection refusals as ECONNREFUSED etc. in the
+    // message; on a 5xx, http-response-object#getBody() throws an Error whose
+    // message contains "status code 5xx". 4xx is not retried (real config error).
+    return (
+      /ECONNREFUSED|ECONNRESET|EHOSTUNREACH|ETIMEDOUT|socket hang ?up/i.test(
+        msg
+      ) || /status code 5\d\d\b/i.test(msg)
+    );
+  }
+
   Object.keys(secretsByPath).forEach(function (vaultPath) {
     const secretsByName = secretsByPath[vaultPath];
     const names = Object.keys(secretsByName);
@@ -266,13 +290,30 @@ export default function prepare(
       process.stdout.write(
         logPrefix + "loading " + names.join(", ") + " from " + vaultPath
       );
-    try {
-      getNewLease(vaultPath, true);
-      !options.silent && process.stdout.write(" " + green("✓") + "\n");
-    } catch (err) {
-      !options.silent && process.stdout.write(" " + red("✕") + "\n");
-      throw err;
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < MAX_INITIAL_FETCH_ATTEMPTS; attempt++) {
+      if (attempt > 0) {
+        const delayMs = 500 * 2 ** (attempt - 1);
+        !options.silent &&
+          console.error(
+            `${logPrefix}initial fetch for ${vaultPath} failed (attempt ${attempt}), retrying in ${delayMs}ms`
+          );
+        sleepSync(delayMs);
+      }
+      try {
+        getNewLease(vaultPath, true);
+        lastErr = undefined;
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (!isTransient(err)) break;
+      }
     }
+    if (lastErr !== undefined) {
+      !options.silent && process.stdout.write(" " + red("✕") + "\n");
+      throw lastErr;
+    }
+    !options.silent && process.stdout.write(" " + green("✓") + "\n");
   });
 
   return options.autoRotate ? emitter : varsWritten;
