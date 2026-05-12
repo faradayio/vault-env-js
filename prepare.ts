@@ -2,7 +2,6 @@ import findRoot from "find-root";
 import request, { Response } from "sync-request";
 import asyncRequest, { ResponsePromise } from "then-request";
 import { readFileSync as readFile } from "fs";
-import { existsSync as fileExists } from "fs";
 import { inspect } from "util";
 import { EventEmitter } from "events";
 import parseSecretfile, { SecretSource } from "./parseSecretfile";
@@ -96,48 +95,26 @@ export default function prepare(
 export default function prepare(
   options: Options = {}
 ): EventEmitter | Record<string, string> {
+  const vault_token = options.VAULT_TOKEN || process.env.VAULT_TOKEN;
+
+  if (vault_token) {
+    console.log(logPrefix + "VAULT_TOKEN is set, using it");
+  } else {
+    // Proxy mode: no token. We talk to the in-pod Vault Agent's API-proxy
+    // listener, configured with `use_auto_auth_token = "force"` — it injects
+    // its auto-auth token on every request, so we send no X-Vault-Token.
+    console.log(
+      logPrefix +
+        "no VAULT_TOKEN — using the Vault Agent API proxy at $VAULT_ADDR " +
+        "(default http://127.0.0.1:8201)"
+    );
+  }
+
   const VAULT_ADDR = (
     options.VAULT_ADDR ||
     process.env.VAULT_ADDR ||
-    "http://127.0.0.1:8200"
+    (vault_token ? "http://127.0.0.1:8200" : "http://127.0.0.1:8201")
   ).replace(/([^/])$/, "$1/");
-  let vault_token = options.VAULT_TOKEN || process.env.VAULT_TOKEN;
-
-  if (vault_token) {
-    console.log("VAULT_TOKEN is set, using VAULT_TOKEN");
-  } else if (fileExists("/vault2/secrets/vault-token")) {
-    let retries = 0;
-    console.log("Using vault token from path: /vault2/secrets/vault-token");
-
-    while (retries < 5) {
-      try {
-        const token = readFile("/vault2/secrets/vault-token", "utf8").trim();
-        if (token) {
-          process.env.VAULT_TOKEN = token;
-          vault_token = token;
-          break;
-        }
-      } catch (e) {
-        if (e instanceof Error) {
-          console.error(
-            logPrefix +
-              "Failed to read /vault2/secrets/vault-token, retrying in 2s: " +
-              e.message
-          );
-        } else {
-          console.error("An unknown error occurred.");
-        }
-      }
-      retries++;
-      setTimeout(() => {
-        console.log("Waiting");
-      }, 2000); // wait 2s
-    }
-  } else {
-    console.error(
-      "vault-token path: /vault2/secrets/vault-token not readable and vault_token not set"
-    );
-  }
 
   const VAULT_API_VERSION =
     options.VAULT_API_VERSION || process.env.VAULT_API_VERSION || "v1";
@@ -162,10 +139,6 @@ export default function prepare(
       console.log(logPrefix + key + " already in environment " + blue("✓"));
     }
   });
-
-  if (secretCount && !vault_token) {
-    throw new Error("Expected VAULT_TOKEN to be set");
-  }
 
   !options.silent &&
     secretCount &&
@@ -193,11 +166,11 @@ export default function prepare(
 
   function getNewLease(vaultPath: string, sync: boolean) {
     const fullUrl = VAULT_ADDR + VAULT_API_VERSION + "/" + vaultPath;
+    const headers: Record<string, string> = {};
+    if (vault_token) headers["X-Vault-Token"] = vault_token;
     if (sync) {
       const response = request("GET", fullUrl, {
-        headers: {
-          "X-Vault-Token": vault_token,
-        },
+        headers,
       });
       try {
         onLease(vaultPath, parseLeaseResponse(checkStatusCode(response)));
@@ -211,9 +184,7 @@ export default function prepare(
       }
     } else {
       const response = asyncRequest("GET", fullUrl, {
-        headers: {
-          "X-Vault-Token": vault_token,
-        },
+        headers,
       });
       !options.silent &&
         console.log(
