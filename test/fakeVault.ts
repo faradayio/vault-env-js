@@ -8,6 +8,16 @@ export interface FakeVaultOptions {
   port: number;
   /** The secrets to serve. */
   secrets: Record<string, Record<string, string>>;
+  /**
+   * When true, skip the token check and instead assert that no X-Vault-Token
+   * header is present (proxy mode: agent injects the token, client sends none).
+   */
+  acceptAnyToken?: boolean;
+  /**
+   * If set, the first N requests will receive a 503 response before the server
+   * responds normally. Used to test retry logic.
+   */
+  failFirstRequests?: number;
 }
 
 /**

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 6.1.0-beta.1
+
+- Add "proxy mode": when `VAULT_TOKEN` is unset, default `VAULT_ADDR` to
+  `http://127.0.0.1:8201` (the Vault Agent API-proxy listener), send no
+  `X-Vault-Token` header, and do not throw `Expected VAULT_TOKEN to be set` —
+  the agent injects its auto-auth token (`use_auto_auth_token = "force"`).
+- Remove the `/vault2/secrets/vault-token` file read (and its broken retry loop).
+- Retry the initial synchronous secret fetch with exponential backoff on
+  connection errors / HTTP 5xx (still fails fast on 4xx).
+
 ## [5.1.0] 2025-04-18
 
 ## Added
